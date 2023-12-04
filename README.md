@@ -45,9 +45,9 @@
    ![8](./Screenshots/8.png)
 
 ### Implementation
+    - To organize the code, C++ and OOP concepts have been employed. The implementation is divided into multiple files:
 
 #### Character.cpp:
-
     - Serves as the base class for all characters in the game.
     - Defines common attributes and behaviors shared by characters.
     - Includes virtual functions for specific actions like attacking and taking damage.
