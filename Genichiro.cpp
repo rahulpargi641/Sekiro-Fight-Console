@@ -2,133 +2,149 @@
 
 using namespace std::literals::chrono_literals;
 
-std::vector <std::future<void>> HealingThread;
-std::vector<std::future<void>> StunedThread;
+std::vector <std::future<void>> healingThread;
+std::vector <std::future<void>> stunedThread;
 
 Genichiro::Genichiro()
 {
     m_Name = "Genichiro";
-    m_Health = m_MaxHealth;
+    m_CurrentHealth = s_MaxHealth;
     m_BaseDamage = 50;
+    m_AdditionalDamage = 10;
     m_ConsumableItems = 3; // Mist orbs
 
-    bResurrected = false;
+    m_HasResurrected = false;
+    m_IsPelletInUse = false;
+
     m_Pellets = 3;
-    bPelletInUse = false;
+    m_VitalityReduction = 3;
+    m_LightningDamage = 20;
 }
 
-void Genichiro::TurnStats(Player* Enemy) const
+void Genichiro::DisplayPlayerStats(Player* enemy) const
 {
     std::cout << "Genichiro's Turn!   ";
-    std::cout << "Genichiro's Health: " << m_Health << "    ||    Enemy's Health: " << Enemy->GetHealth() <<"    ||    Pellets: " << m_Pellets << 
+    std::cout << "Genichiro's Health: " << m_CurrentHealth << "    ||    Enemy's Health: " << enemy->GetHealth() <<"    ||    Pellets: " << m_Pellets << 
         "    ||    Consumables: " << m_ConsumableItems << std::endl;
 }
 
-void Genichiro::Attack1(Player* Enemy)
+void Genichiro::Attack1(Player* enemy)
 {
-    DealDamage(Enemy);
+    InflictDamage(enemy);
+
     std::cout << "Genichiro Attacked!, Ashina Cross!,  ";
-    std::cout << "Damage Done: " << m_BaseDamage << std::endl;
-    std::cout << "" << std::endl;   
+    std::cout << "Damage Done: " << m_BaseDamage << std::endl << std::endl;
 }
 
-void Genichiro::Attack2(Player* Enemy)
+void Genichiro::Attack2(Player* enemy)
 {
-    DealDamage(Enemy);
+    InflictDamage(enemy);
+
     std::cout << "Genochero Attacked!, Dragon Flash!,  ";  // yet to implement different Attack2 functionality
-    std::cout << "Damage Done: " << m_BaseDamage << std::endl;
-    std::cout << "" << std::endl;
+    std::cout << "Damage Done: " << m_BaseDamage << std::endl << std::endl;
 }
 
 void Genichiro::Heal()
 {
-    if (m_Health == m_MaxHealth)
+    if (m_CurrentHealth == s_MaxHealth)
     {
-        std::cout << "Genichiro's Vitality is Full!" << std::endl;
-        std::cout << "" << std::endl;
+        std::cout << "Genichiro's Vitality is Full!" << std::endl << std::endl;
+        return;
     }
-    else if (m_Pellets > 0 && m_Health < m_MaxHealth)
-    {
-        if (!bPelletInUse)
-        {
-            bPelletInUse = true;  // Use the Pellet
-            m_Pellets--;
-            HealingThread.push_back(std::async(std::launch::async, RestoreVitality, &m_Health, &bPelletInUse));
-            std::cout << "Genichiro Used Pallets to Heal !" << std::endl;
-            std::cout << "Genichiro's Vitality Slowly Restoring...." << std::endl;
-            std::cout << "" << std::endl;
 
-        }
-        else
-        {
-            std::cout << "Pallet already working, Increasing Vitality..." << std::endl;
-            std::cout << "Genichiro's Health is = " << m_Health << std::endl;
-            std::cout << "" << std::endl;
-        }
+    HandlePalletUse();
+}
+
+void Genichiro::HandlePalletUse()
+{
+    if (m_Pellets > 0 && m_CurrentHealth < s_MaxHealth)
+        ConsumePallet();
+    else
+        std::cout << "All Pellets have been used!, no more pellets left!" << std::endl << std::endl;
+}
+
+void Genichiro::ConsumePallet()
+{
+    if (!m_IsPelletInUse)
+    {
+        RestoreHealthUsingPallet();
     }
     else
     {
-        std::cout << "All Pellets have been used!, no more pellets left!" << std::endl;
-        std::cout << "" << std::endl;
+        std::cout << "Pallet already working, Increasing Vitality..." << std::endl;
+        std::cout << "Genichiro's Health is = " << m_CurrentHealth << std::endl << std::endl;
     }
 }
 
-
-void Genichiro::ActivateSpecialAbility(Player* Enemy, bool& bKeepTurn)
+void Genichiro::RestoreHealthUsingPallet()
 {
-    if (!bResurrected)
-    {
-        std::cout << "Genichero's Lightning Ability is acitvated only after Resurrection, Genichiro's turn again!" << std::endl;
-        std::cout << "" << std::endl;
-        bKeepTurn = true;
-    }
-    else
-    {
-        std::cout << "Genichiro Attacked! Lightning of Tomoe!" << std::endl;
-        std::cout << "Damage Done: " << m_LightningDamage << std::endl;
-        std::cout << Enemy->m_Name << " is Stunned by the Lightning..." << std::endl;
-        std::cout << "" << std::endl;
+    m_IsPelletInUse = true;  // Use the Pellet
+    m_Pellets--;
+    healingThread.push_back(std::async(std::launch::async, RestoreVitalityAsync, &m_CurrentHealth, &m_IsPelletInUse));
 
-        int EnemyHealth = Enemy->GetHealth();
-        EnemyHealth -= m_LightningDamage;
-        Enemy->SetHealth(EnemyHealth);
-        bKeepTurn = true;
-        StunedThread.push_back(std::async(std::launch::async, Stunned, Enemy, std::ref(bKeepTurn))); 
-    }
+    std::cout << "Genichiro Used Pallets to Heal !" << std::endl;
+    std::cout << "Genichiro's Vitality Slowly Restoring...." << std::endl << std::endl;
 }
 
-
-void Genichiro::RestoreVitality(int* Health, bool* bPelletInUse)
+void Genichiro::RestoreVitalityAsync(int* currentHealth, bool* isPalletInUse)
 {
-    using namespace std::literals::chrono_literals;
-
-    for (int i = 0; i < m_VitalityGainDuration; i++)
-    {
-        std::this_thread::sleep_for(1s); 
-        *Health += m_VitalityGain;
-        if (*Health > m_MaxHealth) *Health = m_MaxHealth;
-        //std::cout << "Health inside the for loop: " << health << std::endl;
-    }
-    std::cout << "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ " << std::endl;
-    std::cout << "Genichiro's Health Increased after 15 seconds: " << *Health << std::endl;
-    std::cout << "" << std::endl;
-    *bPelletInUse = false;
-}
-
-void Genichiro::Stunned(Player* Enemy, bool& bKeepTurn)
-{
-    for (int i = 0; i < m_StunnedDuration; i++)
+    for (int i = 0; i < s_VitalityGainDuration; i++)
     {
         std::this_thread::sleep_for(1s);
+
+        *currentHealth += s_VitalityGain;
+        if (*currentHealth > s_MaxHealth) *currentHealth = s_MaxHealth;
     }
-    bKeepTurn = false;
+
+    std::cout << "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ " << std::endl;
+    std::cout << "Genichiro's Health Increased after 15 seconds: " << *currentHealth << std::endl << std::endl;
+    *isPalletInUse = false;
+}
+
+void Genichiro::ActivateSpecialAbility(Player* enemy, bool& shouldContinueTurn)
+{
+    if (!m_HasResurrected)
+    {
+        std::cout << "Genichero's Lightning Ability can only be activated after Resurrection, Genichiro's turn again!" << std::endl << std::endl;
+        shouldContinueTurn = true;
+    }
+    else
+        PerformLightningAttack(enemy, shouldContinueTurn);
+}
+
+void Genichiro::PerformLightningAttack(Player*& enemy, bool& shouldContinueTurn)
+{
+    std::cout << "Genichiro Attacked! Lightning of Tomoe!" << std::endl;
+    std::cout << "Damage Done: " << m_LightningDamage << std::endl;
+    std::cout << enemy->m_Name << " is Stunned by the Lightning..." << std::endl << std::endl;
+
+    InflictLightningDamage(enemy);
+
+    shouldContinueTurn = true;
+    stunedThread.push_back(std::async(std::launch::async, StunEnemyAysnc, enemy, std::ref(shouldContinueTurn)));  // Stun the enemy
+}
+
+void Genichiro::InflictLightningDamage(Player* enemy)
+{
+    int enemyHealth = enemy->GetHealth();
+    enemyHealth -= m_LightningDamage;
+    enemy->SetHealth(enemyHealth);
+}
+
+void Genichiro::StunEnemyAysnc(Player* Enemy, bool& shouldContinueTurn)
+{
+    for (int i = 0; i < s_StunnedDuration; i++)
+        std::this_thread::sleep_for(1s);
+
+    shouldContinueTurn = false;
     std::cout << "Lightning Effect wore off!" << std::endl;
 }
 
-bool Genichiro::Dead()
+bool Genichiro::IsDead()
 {
-    if (m_Health <= 0 && bResurrected) return true;
-    else if (m_Health <= 0)
+    if (m_CurrentHealth <= 0 && m_HasResurrected) return true;
+
+    if (m_CurrentHealth <= 0)
     {
         Resurrect();
         return false;
@@ -141,12 +157,12 @@ void Genichiro::Resurrect()
 {
     std::cout << "Genichiro's Vitality is zero!" << std::endl;
     std::cout << "Genichiro is resurrecting....." << std::endl;
-    m_Health = m_MaxHealth / 3;
-    bResurrected = true;
-    std::this_thread::sleep_for(7s);
+
+    m_HasResurrected = true;
+    m_CurrentHealth = s_MaxHealth / m_VitalityReduction;
+    std::this_thread::sleep_for(Resurrect_Time);
 
     std::cout << "Genichiro resurrcted!" << std::endl;
-    std::cout << "Genichiro:- For the Glory of ashina ,  I will seize any manner of heretical strength, I will endure any burden. Behold - the Lightning of Tomoe.!" << std::endl;
-    std::cout << "" << std::endl;
+    std::cout << "Genichiro:- For the Glory of ashina ,  I will seize any manner of heretical strength, I will endure any burden. Behold - the Lightning of Tomoe.!" << std::endl << std::endl;
     std::cout << "Press 'Z' to use Lighting Attack!" << std::endl;
 }

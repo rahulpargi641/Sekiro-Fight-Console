@@ -2,51 +2,43 @@
 
 
 Player::Player()
-{
-}
+{}
 
-void Player::ShowPlayerStats() const
+void Player::DisplayItemStats() const
 {
-    std::cout << "Health: " << m_Health << std::endl;
+    std::cout << "Health: " << m_CurrentHealth << std::endl;
     std::cout << "Consumable";
 }
 
-void Player::DealDamage(Player* Enemy)
+void Player::InflictDamage(Player* other)
 {
-    int EnemyHealth = Enemy->GetHealth();
-    if (!EnemyHealth <= 0)
+    int currentHealth = other->GetHealth();
+    if (currentHealth > 0)
     {
-        if (bPerfectForm)
-            EnemyHealth -= m_BaseDamage + AdditionalDamage();
+        if (IsPerfectFormAttack())
+            currentHealth -= m_BaseDamage + m_AdditionalDamage;
         else
-        EnemyHealth -= m_BaseDamage;
+            currentHealth -= m_BaseDamage;
 
-        Enemy->SetHealth(EnemyHealth);
+        other->SetHealth(currentHealth);
     }
 }
 
-int Player::AdditionalDamage()
+int Player::IsPerfectFormAttack()
 {
     srand((unsigned)time(NULL));
-    int MoreDamage = rand();
-    MoreDamage = rand() % 100 + 1;  //Generate random number 1 to 100
-    if (MoreDamage <= 20) //20% chance
+    int perfectAttackChance = rand() % 100 + 1;  // Generate random number from 1 to 100
+    if (perfectAttackChance <= 20) //20% chance
     {
-        bPerfectForm = true;
-        std::cout << "Attacked Using Perfect Form, Additional Damage: " << MoreDamage;
-        return MoreDamage;
-    }
-    else
-    return 0;
-}
-
-bool Player::Dead()
-{
-    if (m_Health <= 0)
-    {
-        bDead = true;
+        std::cout << "Attacked Using Perfect Form, Additional Damage: " << m_AdditionalDamage;
         return true;
     }
     else
         return false;
+}
+
+bool Player::IsDead()
+{
+    m_IsDead = (m_CurrentHealth <= 0);
+    return m_IsDead;
 }
