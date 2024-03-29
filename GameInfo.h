@@ -75,10 +75,7 @@ Info: One of the monks who have been corrupted by their obsession with the undyi
 5. Ability - None
 
 )";
-    const std::string Player4; // Player4 - Red knight Guard, yet to Implement, not needed as per the assignment
-    const std::string Player5; // Player5 - Okami Worrior, yet to Implement, not needed as per the assignment 
 
-    void DisplayInfo();
-    void ShowPlayerInfo(int PlayeNo) const;
-   
+    void DisplayCharacterSelection() const;
+    void DisplayPlayerInfo(int PlayeNo) const;
 };
